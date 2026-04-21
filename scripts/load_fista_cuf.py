@@ -27,6 +27,10 @@ source activate ptv-torch-cuda
 import os,sys
 import yaml
 
+# cuda version of fista.
+# gets compiled when you install into your env: pip install -e python/STCuda
+# note that -e doesn't catch c++/cuda changes, need to (re)install
+import STCuda
 
 # load file path information from the home directory
 file_path_yml = os.path.join(os.environ["HOME"], ".ncar_config_derecho.yaml")
@@ -40,10 +44,6 @@ dirP_str = os.path.join(
 )
 if dirP_str not in sys.path:
     sys.path.append(dirP_str)
-
-# import will compile (if necessary) and load
-# cuda version of fista
-import SpiralTorch.cuda.st_fista_cuf
 
 # non-cuda fista library
 from SpiralTorch import fista
@@ -95,7 +95,7 @@ x0 = {'backscatter':torch.tensor(alpha_arr,dtype=dtype,device=device)}
 alpha = 1e1
 x_lb = torch.zeros_like(x0['backscatter'])-1e10
 x_ub = torch.zeros_like(x0['backscatter'])+1e10
-cu_fista = SpiralTorch.cuda.st_fista_cuf.solve_FISTA_subproblem_kernel
+cu_fista = STCuda.ops.st_fista_subproblem
 
 res_cu = cu_fista(x0['backscatter'],torch.tensor(1e-1/alpha,device=device,dtype=dtype),x_lb,x_ub)
 
