@@ -27,11 +27,6 @@ source activate ptv-torch-cuda
 import os,sys
 import yaml
 
-# cuda version of fista.
-# gets compiled when you install into your env: pip install -e python/STCuda
-# note that -e doesn't catch c++/cuda changes, need to (re)install
-import STCuda
-
 # load file path information from the home directory
 file_path_yml = os.path.join(os.environ["HOME"], ".ncar_config_derecho.yaml")
 path_data = {}
@@ -48,6 +43,10 @@ if dirP_str not in sys.path:
 # non-cuda fista library
 from SpiralTorch import fista
 
+# cuda version of fista.
+# gets compiled when you install into your env: pip install -e packages/STCuda
+# note that -e doesn't catch c++/cuda changes, need to (re)install
+import STCuda
 
 #### Test ####
 
@@ -63,11 +62,11 @@ if is_cuda:
 
 print(f'Preparing to use device {device}')
 
-dtype = torch.float64
+dtype = torch.float32
 
 # create a random test image
-x_axis = np.linspace(-10,10,64)
-y_axis = np.linspace(-10,10,128)
+x_axis = np.linspace(-10,10,289)
+y_axis = np.linspace(-10,10,397)
 x_ax_mesh,y_ax_mesh = np.meshgrid(x_axis,y_axis)
 
 rec_count = 80
