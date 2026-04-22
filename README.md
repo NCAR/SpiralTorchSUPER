@@ -160,3 +160,9 @@ Starting in PyTorch 2.4 the method for creating custom cuda operators changes
 https://pytorch.org/tutorials/advanced/cpp_custom_ops.html#testing-an-operator
 
 This will require modifications to how the package is setup but the new tutorial is a bit hard to follow.  Anyone interested in updating to cuda kernel should contact me.  It would be great to have this work beyond Pytorch 2.3.
+
+### Updates for Pytorch > 2.3
+In the SpiralTorch directory type
+```
+pip install -e packages/STCuda
+```
