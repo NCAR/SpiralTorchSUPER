@@ -28,6 +28,7 @@ def get_extensions():
         "nvcc": [
             "-O3" if not debug_mode else "-O0",
             "-lineinfo",
+            "-rdc=true",
         ],
     }
     if debug_mode:
@@ -47,6 +48,9 @@ def get_extensions():
             sources,
             extra_compile_args=extra_compile_args,
             extra_link_args=extra_link_args,
+            dlink=True,
+            dlink_libraries=["cudadevrt"],
+            libraries=["cudart", "cudadevrt"],
             py_limited_api=py_limited_api,
         )
     ]
