@@ -27,6 +27,7 @@ def get_extensions():
         ],
         "nvcc": [
             "-O3" if not debug_mode else "-O0",
+            "-lineinfo",
         ],
     }
     if debug_mode:
