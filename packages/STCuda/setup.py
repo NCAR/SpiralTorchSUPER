@@ -10,6 +10,11 @@ from torch.utils.cpp_extension import (
 
 library_name = "STCuda"
 
+import importlib.util
+spec = importlib.util.spec_from_file_location("version", library_name + "/version.py")
+ver = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(ver)
+
 if torch.__version__ >= "2.6.0":
     py_limited_api = True
 else:
@@ -58,7 +63,7 @@ def get_extensions():
 
 setup(
     name=library_name,
-    version="0.0.1",
+    version=ver.__version__,
     packages=find_packages(),
     ext_modules=get_extensions(),
     install_requires=["torch"],
