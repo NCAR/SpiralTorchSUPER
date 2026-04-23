@@ -34,6 +34,7 @@ def get_extensions():
             "-O3" if not debug_mode else "-O0",
             "-lineinfo",
             "-rdc=true",
+            "-use_fast_math"
         ],
     }
     if debug_mode:
