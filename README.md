@@ -142,7 +142,17 @@ except Exception as e:
 # Compiling CUDA for FISTA
 There are two options for the FISTA function used in the gradient calculation.  `jit-fista` uses PyTorch's precompiler and is built on the PyTorch types and architecture.  
 
-A faster version of FISTA (`st_fista_cuf` or `cuda-fista`) is a compiled cuda kernel.  While this approach is faster, it needs to be compiled on the system. The version of PyTorch needs to be 2.3 or earlier and algin with the cuda compiler version.  In the following command line installation the cuda version is 12.x.  The `--override-channels` flag is needed when other default repositories (e.g. conda-forge) may produce competing installation versions.
+A faster version of FISTA (`st_fista_cuf` or `cuda-fista` or `STCuda`) is a compiled cuda kernel.  While this approach is faster, it needs to be compiled on the system. 
+
+## Pytorch > 2.3
+For newer versions of PyTorch, the cuda compiler is installed using `pip`.
+In the SpiralTorch directory type.
+```
+pip install -e packages/STCuda
+```
+
+## PyTorch <= 2.3
+The older version `st_fista_cuf` requires  PyTorch to be 2.3 or earlier and PyTorch must algin with the cuda compiler version.  In the following command line installation the cuda version is 12.x.  The `--override-channels` flag is needed when other default repositories (e.g. conda-forge) may produce competing installation versions.
 ```
 conda install pytorch=2.3 pytorch-cuda=12 -c pytorch -c nvidia --override-channels
 
@@ -161,8 +171,3 @@ https://pytorch.org/tutorials/advanced/cpp_custom_ops.html#testing-an-operator
 
 This will require modifications to how the package is setup but the new tutorial is a bit hard to follow.  Anyone interested in updating to cuda kernel should contact me.  It would be great to have this work beyond Pytorch 2.3.
 
-### Updates for Pytorch > 2.3
-In the SpiralTorch directory type
-```
-pip install -e packages/STCuda
-```
