@@ -148,8 +148,9 @@ A faster version of FISTA (`st_fista_cuf` or `cuda-fista` or `STCuda`) is a comp
 For newer versions of PyTorch, the cuda compiler is installed using `pip`.
 In the SpiralTorch directory type.
 ```
-pip install -e packages/STCuda
+pip install -e packages/STCuda --no-build-isolation
 ```
+Note the `--no-build-isolation` flag is needed in some cases where the version of Cuda is specified and potentially different from the default.
 
 ## PyTorch <= 2.3
 The older version `st_fista_cuf` requires  PyTorch to be 2.3 or earlier and PyTorch must algin with the cuda compiler version.  In the following command line installation the cuda version is 12.x.  The `--override-channels` flag is needed when other default repositories (e.g. conda-forge) may produce competing installation versions.
