@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor
 
-__all__ = ["st_fista_subproblem"]
+__all__ = ["st_fista_subproblem", "st_lidar_fwd"]
 
 def st_fista_subproblem(b: Tensor, lam1: Tensor, lb: Tensor, ub: Tensor) -> Tensor:
     """
@@ -34,4 +34,25 @@ def _(b, lam1, lb, ub):
     torch._check(lb.dtype == torch.float)
     torch._check(ub.dtype == torch.float)
     return torch.empty_like(b)
+
+def st_lidar_fwd(
+    """
+    Fused lidar forward model: spectral convolution + integration.
+    Returns rho0 (T, R) = sum_freq[ conv(exp(-od)*spec, bs) * rx * exp(-od) ]
+    Caller should multiply by remaining calibration scalars (r2_loss, mol_bs, common, etc.)
+    """
+    od: Tensor,    # (T, R, F)  optical depth
+    bs: Tensor,    # (T, R, F)  backscatter spectrum
+    spec: Tensor,  # (T, 1, F)  laser wavelength histogram
+    rx: Tensor,    # (F,)       receiver transmission
+) -> Tensor:       # (T, R)     rho0 = sum_f[ conv(exp(-od)*spec, bs)[f] * rx[f] * exp(-od[f]) ]
+    return torch.ops.STCuda.st_lidar_fwd.default(od, bs, spec, rx)
+
+@torch.library.register_fake("STCuda::st_lidar_fwd")
+def _(od, bs, spec, rx):
+    torch._check(od.dim() == 3)
+    torch._check(bs.shape == od.shape)
+    torch._check(spec.shape[0] == od.shape[0] and spec.shape[1] == 1 and spec.shape[2] == od.shape[2])
+    torch._check(rx.shape[0] == od.shape[2])
+    return od.new_empty(od.shape[0], od.shape[1])
 
