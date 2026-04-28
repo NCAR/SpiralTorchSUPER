@@ -36,16 +36,16 @@ def _(b, lam1, lb, ub):
     return torch.empty_like(b)
 
 def st_lidar_fwd(
-    """
-    Fused lidar forward model: spectral convolution + integration.
-    Returns rho0 (T, R) = sum_freq[ conv(exp(-od)*spec, bs) * rx * exp(-od) ]
-    Caller should multiply by remaining calibration scalars (r2_loss, mol_bs, common, etc.)
-    """
     od: Tensor,    # (T, R, F)  optical depth
     bs: Tensor,    # (T, R, F)  backscatter spectrum
     spec: Tensor,  # (T, 1, F)  laser wavelength histogram
     rx: Tensor,    # (F,)       receiver transmission
 ) -> Tensor:       # (T, R)     rho0 = sum_f[ conv(exp(-od)*spec, bs)[f] * rx[f] * exp(-od[f]) ]
+    """
+    Fused lidar forward model: spectral convolution + integration.
+    Returns rho0 (T, R) = sum_freq[ conv(exp(-od)*spec, bs) * rx * exp(-od) ]
+    Caller should multiply by remaining calibration scalars (r2_loss, mol_bs, common, etc.)
+    """
     return torch.ops.STCuda.st_lidar_fwd.default(od, bs, spec, rx)
 
 @torch.library.register_fake("STCuda::st_lidar_fwd")
