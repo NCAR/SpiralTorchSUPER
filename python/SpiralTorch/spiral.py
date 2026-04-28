@@ -164,6 +164,8 @@ class sparsa_torch_autograd:
         self.x_lb = None
         self.x_ub = None
 
+        self.base_fwd_model_nograd_lst = None
+
         # TODO Remove
         # set the channel weights to be empty to start
         # self.chan_weight_lst = None
@@ -200,7 +202,8 @@ class sparsa_torch_autograd:
     def load_fit_parameters(self,x:Dict[str,torch.tensor],
                             y_obs_dct_lst:List[Dict[str,torch.tensor]],
                             fwd_model_lst:List[Callable],
-                            fit_var:str,):
+                            fit_var:str,
+                            fwd_model_nograd_lst:List[Callable]=None,):
         """
         Set all the fitting terms
             x: Dict[torch.tensor]
@@ -234,6 +237,7 @@ class sparsa_torch_autograd:
         # store the functions used to compute the
         # forward models using the dictionary input
         self.base_fwd_model_lst = fwd_model_lst
+        self.base_fwd_model_nograd_lst = fwd_model_nograd_lst
 
         # store which variable this subproblem is
         # configured to optimize
@@ -332,6 +336,12 @@ class sparsa_torch_autograd:
             # and save time on the forward model.
             self.fwd_model_lst+=[lambda x,idx_loc=idx: self.base_fwd_model_lst[idx_loc](**{'fit_var':self.fit_var,self.fit_var:x},**self.x_kwargs)]
         
+        _nograd_base = self.base_fwd_model_nograd_lst if self.base_fwd_model_nograd_lst is not None else self.base_fwd_model_lst
+        self.fwd_model_nograd_lst = [
+            lambda x, idx_loc=idx: _nograd_base[idx_loc](**{'fit_var': self.fit_var, self.fit_var: x}, **self.x_kwargs)
+            for idx in range(len(_nograd_base))
+        ]
+
         # set the fit parameter from the dictionary
         self.x = copy.deepcopy(x[self.fit_var]).requires_grad_(True) # this sets the initial condition
 
@@ -371,6 +381,13 @@ class sparsa_torch_autograd:
             loss += self.loss_fn_lst[idx](**y_est,**self.y_obs_dct_lst[idx]).sum()
         
         return loss
+    
+    def calc_loss_fast(self, x: torch.tensor) -> torch.tensor:
+        loss = torch.tensor(0, device=self.device, dtype=self.dtype)
+        for idx, mod in enumerate(self.fwd_model_nograd_lst):
+            y_est = mod(x)
+            loss += self.loss_fn_lst[idx](**y_est, **self.y_obs_dct_lst[idx]).sum()
+        return loss
         
     
 
@@ -397,7 +414,8 @@ class sparsa_torch_autograd:
         x_p1 = self.fista(x-x_grad/alpha,self.penalty_weight/alpha,
                         self.x_lb,self.x_ub)
             
-        obj_p1 = self.calc_loss(x_p1) + self.pen_fn(x_p1)
+        # obj_p1 = self.calc_loss(x_p1) + self.pen_fn(x_p1)
+        obj_p1 = self.calc_loss_fast(x_p1) + self.pen_fn(x_p1)
         dx_l2_norm_p1 = torch.linalg.norm((x_p1 - x).ravel(), 2)**2
 
         # print(f"{self.loop_iter}, {self.alpha}: {dx_l2_norm_p1}, {obj_p1}")
@@ -641,6 +659,7 @@ class multiSpiral_autograd:
         self.y_val_lst = []
 
         self.fwd_model_lst = []
+        self.fwd_model_nograd_lst = None
         self.noise_model_lst = []
         self.noise_model_str_lst = []
 
@@ -672,6 +691,9 @@ class multiSpiral_autograd:
     
     def set_fwd_model_lst(self, fwd_model_lst:List[Callable]):
         self.fwd_model_lst = fwd_model_lst
+
+    def set_fwd_model_nograd_lst(self, fwd_model_nograd_lst:List[Callable]):
+        self.fwd_model_nograd_lst = fwd_model_nograd_lst
 
     def set_y_fit_lst(self,y_fit_lst:List[Dict[str,np.ndarray]]):
         """
@@ -991,7 +1013,9 @@ class multiSpiral_autograd:
         assert len(self.fwd_model_lst) > 0
 
         for var in self.subprob_dct:
-            self.subprob_dct[var].load_fit_parameters(self.x, self.y_fit_lst, self.fwd_model_lst, var)
+            # self.subprob_dct[var].load_fit_parameters(self.x, self.y_fit_lst, self.fwd_model_lst, var)
+            self.subprob_dct[var].load_fit_parameters(self.x, self.y_fit_lst, self.fwd_model_lst, var,
+                                                       fwd_model_nograd_lst=self.fwd_model_nograd_lst)
             # if self.channel_mask_lst is not None:
             #     self.subprob_dct[var].set_channel_masks(self.channel_mask_lst)
             self.subprob_dct[var].set_alpha(self.alpha0.get(var,1.0))
