@@ -150,6 +150,11 @@ In the SpiralTorch directory type.
 ```
 pip install -e packages/STCuda
 ```
+On Derecho `pip` needs to be told to use the local loaded version of cuda explicitly or it will just use the latest
+```
+pip install -e packages/STCuda --no-build-isolation
+```
+Also, the build tends to fail if it's not on a GPU node.
 
 ## PyTorch <= 2.3
 The older version `st_fista_cuf` requires  PyTorch to be 2.3 or earlier and PyTorch must algin with the cuda compiler version.  In the following command line installation the cuda version is 12.x.  The `--override-channels` flag is needed when other default repositories (e.g. conda-forge) may produce competing installation versions.
