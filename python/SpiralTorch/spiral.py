@@ -592,12 +592,12 @@ class sparsa_torch_autograd:
             
             if (rel_step < self.eps) and (self.loop_iter > self.min_iter):
                 # print("Found Minimum")
-                status_str = f"Found Minimum for eps {self.eps}"
+                status_str = f"Found Minimum for eps {self.eps}. Final step: {rel_step}"
                 break
             
             if self.loop_iter >= self.max_iter:
                 # print("Maximum Iterations Exceeded")
-                status_str = "Maximum Iterations Exceeded"
+                status_str = f"Maximum Iterations Exceeded. Final step: {rel_step}"
                 break
 
             if time.time() - self.start_time > self.timeout:
