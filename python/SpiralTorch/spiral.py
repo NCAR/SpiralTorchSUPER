@@ -448,7 +448,6 @@ class sparsa_torch_autograd:
         
         status_str = ""
         self.loop_iter = 0
-        terminate_opt = False
         self.start_time = time.time()
 
         loss = self.calc_loss(self.x)
@@ -470,7 +469,7 @@ class sparsa_torch_autograd:
         while True: 
             with torch.no_grad(): 
                 x_p1, obj_p1, dx_l2_norm_p1 = self.prox_gradient(self.x,x_grad,self.alpha)
-                
+
                 while (not self.acceptance_criteria(obj_p1,self.alpha,dx_l2_norm_p1)) and (self.alpha <= self.alpha_max):
                     self.alpha *= self.eta
                     x_p1, obj_p1, dx_l2_norm_p1 = self.prox_gradient(self.x,x_grad,self.alpha)
@@ -481,7 +480,6 @@ class sparsa_torch_autograd:
                 if (obj_p1 >= self.objective_tnsr[self.loop_iter] and self.alpha >= self.alpha_max) or torch.isnan(obj_p1) or (obj_p1 > 0):
                     status_str += f"Step produced increased objective with alpha: {self.alpha.item()}"
                     status_str += f"\n      objective change {obj_p1.item()-self.objective_tnsr[self.loop_iter].item()}"
-                    termimate_opt = True
                     rel_step = 0.0
                     self.rel_step_tnsr[self.loop_iter] = rel_step
                     # # self.x.data = copy.deepcopy(x_bu)
@@ -528,7 +526,7 @@ class sparsa_torch_autograd:
                         rel_step = np.inf
                     else:
                         rel_step = torch.sqrt(dx_l2_norm_p1) / x_sqrt_l2_norm
-                        
+
                     self.objective_tnsr[self.loop_iter] = obj_p1
                     self.rel_step_tnsr[self.loop_iter] = rel_step
 
@@ -556,7 +554,7 @@ class sparsa_torch_autograd:
                     # print(f"  xp1[1,60]: {x_p1[1,60].item()}")
 
                     # obj_m1 = self.loss_fn(self.x) + self.pen_fn(self.x)
-                    
+
                     # if obj_m1 != obj_p1 or obj_m2 != obj_p1:
                     #     status_str += "On copy step, objective function has changed value"
                     #     status_str += f"\n      loop_iter: {self.loop_iter}"
@@ -567,9 +565,6 @@ class sparsa_torch_autograd:
                     #     status_str += f"\n      max x difference {max_x_diff}"
                     #     status_str += f"\n      x1: {x_bu_str1}"
                     #     status_str += f"\n      x2: {x_bu_str2}\n"
-            
-            if terminate_opt:
-                break
 
             # print(f"      step alpha {self.alpha.item()}")
             # print(f"      objective change {obj_p1.item()-self.objective_tnsr[self.loop_iter-1].item()}")
@@ -580,21 +575,20 @@ class sparsa_torch_autograd:
 
             # update for relative step calculation
             x_sqrt_l2_norm = torch.linalg.norm(self.x.ravel(), 2)
-            
+
             self.alpha_tnsr[self.loop_iter] = self.alpha
-            
+
             if dx_l2_norm_p1 == 0:
                 self.alpha = self.alpha_min
             else:
                 self.alpha = self.get_new_alpha(x_diff, x_grad - x_m1_grad)
                 self.alpha = torch.clamp(self.alpha,min=self.alpha_min,max=self.alpha_max)
-            
-            
+
             if (rel_step < self.eps) and (self.loop_iter > self.min_iter):
                 # print("Found Minimum")
                 status_str = f"Found Minimum for eps {self.eps}. Final step: {rel_step}"
                 break
-            
+
             if self.loop_iter >= self.max_iter:
                 # print("Maximum Iterations Exceeded")
                 status_str = f"Maximum Iterations Exceeded. Final step: {rel_step}"
@@ -610,9 +604,8 @@ class sparsa_torch_autograd:
             self.total_rel_step = np.inf
         else:
             self.total_rel_step = (torch.sqrt(dx_total_l2_norm_p1) / x_sqrt_l2_norm_init).item()      
-                
-        return status_str
 
+        return status_str
 
 
 class multiSpiral_autograd:
