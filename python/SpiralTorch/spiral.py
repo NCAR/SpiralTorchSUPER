@@ -114,18 +114,18 @@ class sparsa_torch_autograd:
     # e.g. [{'counts':ch1_counts,'active_time':ch1_active_time}, {'counts':ch2_counts,'active_time':ch2_active_time},...]
     # then the loss function is called on an element as loss(**y_obs_dct_lst[idx])
     # such that the loss function definition uses keyword arguments
-    
+
     def __init__(self,device,dtype):
         self.device = device
         self.dtype = dtype
-        
+
         """
         set the default values for the 
         optimization routine.  These can be
         set to non-default values by calling
         the methods individually
         """
-        
+
         # set default value for max iterations
         self.set_max_iter(100)
         self.min_iter = 1
@@ -135,24 +135,24 @@ class sparsa_torch_autograd:
         # set the default number of seconds before
         # the sparsa loop times out
         self.timeout = 1000 
-        
+
         # set default value for eta
         self.set_eta(2.0)
-        
+
         # set default value for FISTA criteria
         self.set_sigma(1e-5)
-        
+
         # set default value for terminating SpaRSA
         self.set_eps(1e-5)
-        
+
         # set default value for TV penalty
         self.set_penalty_weight(1.0)
-        
+
         # set alpha
         self.set_alpha(1.0)
         self.set_alpha_min(1e4)
         self.set_alpha_max(1e20)
-        
+
         # set default on history used for
         # alpha acceptance criteria
         self.M_hist = 100
@@ -169,19 +169,19 @@ class sparsa_torch_autograd:
         # TODO Remove
         # set the channel weights to be empty to start
         # self.chan_weight_lst = None
-        
+
     def set_max_iter(self,max_iter:int):
         self.max_iter = max_iter
         self.objective_tnsr = torch.zeros(max_iter+1,device=self.device, dtype=self.dtype)
         self.rel_step_tnsr = torch.zeros(max_iter+1,device=self.device, dtype=self.dtype)
         self.alpha_tnsr = torch.zeros(max_iter+1,device=self.device, dtype=self.dtype)
-    
+
     def set_eta(self,eta:float):
         self.eta = torch.tensor(eta,device=self.device, dtype=self.dtype)
-        
+
     def set_sigma(self,sigma:float):
         self.sigma = torch.tensor(sigma,device=self.device, dtype=self.dtype)
-        
+
     def set_alpha(self,alpha:float):
         self.alpha = torch.tensor(alpha,device=self.device, dtype=self.dtype)
 
@@ -190,15 +190,13 @@ class sparsa_torch_autograd:
 
     def set_alpha_max(self,alpha_max:float):
         self.alpha_max = torch.tensor(alpha_max,device=self.device, dtype=self.dtype)
-        
+
     def set_eps(self,eps:float):
         self.eps = torch.tensor(eps,device=self.device, dtype=self.dtype)
-    
+
     def set_penalty_weight(self,tau:float):
         self.penalty_weight = torch.tensor(tau,device=self.device, dtype=self.dtype)
 
-
-        
     def load_fit_parameters(self,x:Dict[str,torch.tensor],
                             y_obs_dct_lst:List[Dict[str,torch.tensor]],
                             fwd_model_lst:List[Callable],
@@ -233,7 +231,7 @@ class sparsa_torch_autograd:
                 set the forward model multiplier to account for
                 Poisson thinning
         """
-        
+
         # store the functions used to compute the
         # forward models using the dictionary input
         self.base_fwd_model_lst = fwd_model_lst
@@ -242,7 +240,7 @@ class sparsa_torch_autograd:
         # store which variable this subproblem is
         # configured to optimize
         self.fit_var = fit_var
-        
+
         # save the observation data
         # force it to be the correct data type
         self.y_obs_dct_lst = []
@@ -255,7 +253,7 @@ class sparsa_torch_autograd:
         # setup the optimization variable
         # and subproblem functions
         self.set_fit_param(x)
-    
+
     def set_loss_fn_lst(self,fnc_lst:List[Callable]):
         """
         set the loss function by passing in
@@ -264,8 +262,7 @@ class sparsa_torch_autograd:
         self.loss_fn_lst = []
         for fnc in fnc_lst:
             self.loss_fn_lst.append(fnc)
-        
-        
+
     def set_fista(self,fista_ver_str, order:int=1):
         """
         compile fista jit.script
@@ -300,7 +297,6 @@ class sparsa_torch_autograd:
                                                     self.x_lb,self.x_ub))
             self.pen_fn = self.pen_fn_1stOrder
 
-        
     def reset_iterations(self):
         """
         Reset the iterations
@@ -311,7 +307,7 @@ class sparsa_torch_autograd:
 
         # reset the total subproblem step to zero
         self.total_rel_step = 0
-    
+
     def set_fit_param(self,x:Dict[str,torch.tensor]):
         """
         Configure the optimization routine for a particular
@@ -325,17 +321,17 @@ class sparsa_torch_autograd:
 
         # set the additional parameters not being fit
         self.x_kwargs = create_x_kwargs(x,self.fit_var)
-        
+
         # setup the forward models to take a torch.tensor
         # input from one variable
         self.fwd_model_lst = []
         for idx,_ in enumerate(self.base_fwd_model_lst):
-            # input arguments include one that identifies what variable is being fit ('fit_var') as well as 
+            # input arguments include one that identifies what variable is being fit ('fit_var') as well as
             # specifying the value of the fit variable as a variable in the function (self.fit_var:x)
             # by specifying the fit variable to the function, it allows us to selectively call update steps
             # and save time on the forward model.
             self.fwd_model_lst+=[lambda x,idx_loc=idx: self.base_fwd_model_lst[idx_loc](**{'fit_var':self.fit_var,self.fit_var:x},**self.x_kwargs)]
-        
+
         _nograd_base = self.base_fwd_model_nograd_lst if self.base_fwd_model_nograd_lst is not None else self.base_fwd_model_lst
         self.fwd_model_nograd_lst = [
             lambda x, idx_loc=idx: _nograd_base[idx_loc](**{'fit_var': self.fit_var, self.fit_var: x}, **self.x_kwargs)
@@ -355,16 +351,14 @@ class sparsa_torch_autograd:
         #     # automatically configure the bounds to be infinite
         #     # this can be overwritten using the set_x_lower_bounds()/set_x_upper_bounds() methods
         #     self.set_x_lower_bound(torch.zeros(self.x.shape,device=self.device,dtype=self.dtype)-np.inf)
-            # self.set_x_upper_bound(torch.zeros(self.x.shape,device=self.device,dtype=self.dtype)+np.inf)
-        
+        # self.set_x_upper_bound(torch.zeros(self.x.shape,device=self.device,dtype=self.dtype)+np.inf)
+
     def set_x_lower_bound(self,xlb:torch.tensor):
         self.x_lb = copy.deepcopy(xlb)
-    
+
     def set_x_upper_bound(self,xub:torch.tensor):
         self.x_ub = copy.deepcopy(xub)
-        
-        
-    
+
     """
     General Definitions - possibly move to subclass
     """
@@ -379,17 +373,15 @@ class sparsa_torch_autograd:
             # to accomidate multi-parameter PDFs
             y_est = mod(x)  
             loss += self.loss_fn_lst[idx](**y_est,**self.y_obs_dct_lst[idx]).sum()
-        
+
         return loss
-    
+
     def calc_loss_fast(self, x: torch.tensor) -> torch.tensor:
         loss = torch.tensor(0, device=self.device, dtype=self.dtype)
         for idx, mod in enumerate(self.fwd_model_nograd_lst):
             y_est = mod(x)
             loss += self.loss_fn_lst[idx](**y_est, **self.y_obs_dct_lst[idx]).sum()
         return loss
-        
-    
 
     def pen_fn_1stOrder(self,x):
         tv = torch.sum(torch.abs(torch.diff(x,dim=0))) + torch.sum(torch.abs(torch.diff(x,dim=1)))
@@ -402,18 +394,32 @@ class sparsa_torch_autograd:
     def pen_fn_1st2ndOrder(self,x):
         tv = torch.sum(torch.abs(torch.diff(x,dim=0))) + torch.sum(torch.abs(torch.diff(torch.diff(x,dim=1),dim=1)))
         return self.penalty_weight*tv
-    
+
     """
     SpaRSA definitions
     """
-        
+
     def get_new_alpha(self,x_diff,x_grad_diff):
         return torch.sum(x_diff*x_grad_diff)/torch.linalg.norm(x_diff.ravel(), 2)**2
-        
+
+    def prox_gradient_scalar_optim(self,x,x_grad,alpha):
+        if x.numel() == 1: 
+            # scalar variable, so need to call fista
+            x_p1 = torch.clamp(x - x_grad / alpha, self.x_lb, self.x_ub)
+        else:
+            x_p1 = self.fista(x-x_grad/alpha,self.penalty_weight/alpha,
+                            self.x_lb,self.x_ub)
+
+        obj_p1 = self.calc_loss_fast(x_p1) + self.pen_fn(x_p1)
+        dx_l2_norm_p1 = torch.linalg.norm((x_p1 - x).ravel(), 2)**2
+
+        return x_p1, obj_p1, dx_l2_norm_p1
+
+
     def prox_gradient(self,x,x_grad,alpha):
         x_p1 = self.fista(x-x_grad/alpha,self.penalty_weight/alpha,
                         self.x_lb,self.x_ub)
-            
+
         # obj_p1 = self.calc_loss(x_p1) + self.pen_fn(x_p1)
         obj_p1 = self.calc_loss_fast(x_p1) + self.pen_fn(x_p1)
         dx_l2_norm_p1 = torch.linalg.norm((x_p1 - x).ravel(), 2)**2
@@ -429,23 +435,98 @@ class sparsa_torch_autograd:
         # if torch.isnan(x_p1).sum() > 0:
         #     print(f"{torch.isnan(x_p1).sum()} nans in x_p1")
 
-        
-        
         return x_p1, obj_p1, dx_l2_norm_p1
-    
+
     def acceptance_criteria(self,obj_value,alpha,dx_norm_l2):
         hist_idx = np.maximum(self.loop_iter-self.M_hist,0)
         max_history = self.objective_tnsr[hist_idx:self.loop_iter+1].max()
         step_inc = 0.5*self.sigma*alpha*dx_norm_l2
         accept_result = obj_value <= max_history - step_inc
-        
-#         print(f"{obj_value[0].item()}  :  {hist_idx}, {max_history}, {step_inc}, {accept_result[0].item()}")
-        
+
+        # print(f"{obj_value[0].item()}  :  {hist_idx}, {max_history}, {step_inc}, {accept_result[0].item()}")
+
         return accept_result
-    
-    
+
+    def solve_sparsa_subprob_scalar_gd(self) -> str:
+        """
+        Pure (projected) gradient descent. Replacement for
+        solve_sparsa_subprob intended for scalar variables where TV is
+        identically zero. self.alpha is held fixed at its current
+        value and used as the inverse step size.
+        """
+        status_str = ""
+        self.loop_iter = 0
+        self.start_time = time.time()
+
+        loss = self.calc_loss(self.x)
+        self.objective_tnsr[0] = loss
+        self.alpha_tnsr[self.loop_iter] = self.alpha
+        loss.backward()
+        x_grad = copy.deepcopy(self.x.grad)
+        x_sqrt_l2_norm = torch.linalg.norm(self.x.ravel(), 2)
+        x_sqrt_l2_norm_init = x_sqrt_l2_norm
+        x0 = copy.deepcopy(self.x.data)
+
+        while True:
+            with torch.no_grad():
+                x_p1 = torch.clamp(self.x - x_grad / self.alpha, self.x_lb, self.x_ub)
+                obj_p1 = self.calc_loss_fast(x_p1)
+                dx_l2_norm_p1 = torch.linalg.norm((x_p1 - self.x).ravel(), 2)
+
+                # handle divergence
+                if torch.isnan(obj_p1) or obj_p1 > 0:
+                    status_str += f"Step diverged with alpha: " f"{self.alpha.item()}"
+                    status_str += (
+                        f"\n      objective change "
+                        f"{obj_p1.item()-self.objective_tnsr[self.loop_iter].item()}"
+                    )
+                    rel_step = 0.0
+                    self.rel_step_tnsr[self.loop_iter] = rel_step
+                    self.x.grad = None
+                    break
+
+                self.loop_iter += 1
+
+                if x_sqrt_l2_norm == 0:
+                    rel_step = np.inf
+                else:
+                    rel_step = dx_l2_norm_p1 / x_sqrt_l2_norm
+
+                self.objective_tnsr[self.loop_iter] = obj_p1
+                self.rel_step_tnsr[self.loop_iter] = rel_step
+
+                self.x.grad = None
+                self.x.data = x_p1.clone()
+                self.x.grad = None
+
+            loss = self.calc_loss(self.x)
+            loss.backward()
+            x_grad = copy.deepcopy(self.x.grad)
+
+            x_sqrt_l2_norm = torch.linalg.norm(self.x.ravel(), 2)
+            self.alpha_tnsr[self.loop_iter] = self.alpha
+
+            if (rel_step < self.eps) and (self.loop_iter > self.min_iter):
+                status_str = f"Found Minimum for eps {self.eps}. " f"Final step: {rel_step}"
+                break
+
+            if self.loop_iter >= self.max_iter:
+                status_str = f"Maximum Iterations Exceeded. " f"Final step: {rel_step}"
+                break
+
+            if time.time() - self.start_time > self.timeout:
+                status_str = f"Exceeded maximum SPARSA time of " f"{self.timeout} seconds"
+                break
+
+        dx_total_l2_norm_p1 = torch.linalg.norm((self.x - x0).ravel(), 2)
+        if x_sqrt_l2_norm_init == 0:
+            self.total_rel_step = np.inf
+        else:
+            self.total_rel_step = (dx_total_l2_norm_p1 / x_sqrt_l2_norm_init).item()
+
+        return status_str
+
     def solve_sparsa_subprob(self)->str:
-        
         status_str = ""
         self.loop_iter = 0
         self.start_time = time.time()
